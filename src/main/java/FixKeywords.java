@@ -14,17 +14,14 @@ public class FixKeywords {
         data.resolutions.forEach((k,v)->{
             Set<String> iids = data.conceptsIID.get("keyword").get(k);
             if (iids.size()==1) {
-                System.out.print(iids.iterator().next()+"-->");
-            }
-            for (String value : v) {
-                Set<String> vIIDS = data.conceptsIID.get(value).get(k);
-                if (vIIDS.size()==1) {
-                    System.out.println(vIIDS.iterator().next());
-                } else {
-                    System.out.println("");
+                String mapping = iids.iterator().next()+"-->";
+                for (String value : v) {
+                    Set<String> vIIDS = data.conceptsIID.get(value).get(k);
+                    if (vIIDS.size()==1) {
+                        System.out.println(mapping+vIIDS.iterator().next());
+                    }
                 }
             }
-            System.out.println("");
         });
     }
 }

@@ -38,11 +38,16 @@ public class LoadExtractedData {
                 while ((line = reader.readLine())!=null) {
                     String[] lineParts = line.split(";");
                     lineParts[1] = lineParts[1].replace("[","").replace("]","");
+                    String[] iids = lineParts[1].split(",");
                     if (conceptsIID.get(conceptName).containsKey(lineParts[0])) {
-                        conceptsIID.get(conceptName).get(lineParts[0]).add(lineParts[1]);
+                        for (String iid : iids) {
+                            conceptsIID.get(conceptName).get(lineParts[0]).add(iid);
+                        }
                     } else {
                         conceptsIID.get(conceptName).put(lineParts[0],new HashSet<String>());
-                        conceptsIID.get(conceptName).get(lineParts[0]).add(lineParts[1]);
+                        for (String iid : iids) {
+                            conceptsIID.get(conceptName).get(lineParts[0]).add(iid);
+                        }
                     }
                 }
             } catch (IOException e) {
