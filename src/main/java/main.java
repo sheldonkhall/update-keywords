@@ -8,7 +8,7 @@ public class main {
         data.loadFromDisk();
         FixKeywords fix = new FixKeywords(data);
         fix.prepareIIDMaps();
-
+        fix.resolutionIIDMap.forEach((k,v)->fix.updateKeyword(k,v));
         System.exit(0);
     }
 }
