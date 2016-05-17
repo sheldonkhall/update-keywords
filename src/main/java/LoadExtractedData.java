@@ -41,12 +41,12 @@ public class LoadExtractedData {
                     String[] iids = lineParts[1].split(",");
                     if (conceptsIID.get(conceptName).containsKey(lineParts[0])) {
                         for (String iid : iids) {
-                            conceptsIID.get(conceptName).get(lineParts[0]).add(iid);
+                            conceptsIID.get(conceptName).get(lineParts[0]).add(iid.trim());
                         }
                     } else {
                         conceptsIID.get(conceptName).put(lineParts[0],new HashSet<String>());
                         for (String iid : iids) {
-                            conceptsIID.get(conceptName).get(lineParts[0]).add(iid);
+                            conceptsIID.get(conceptName).get(lineParts[0]).add(iid.trim());
                         }
                     }
                 }
