@@ -1,11 +1,13 @@
-import com.thinkaurelius.titan.core.TitanFactory;
-import com.thinkaurelius.titan.core.TitanGraph;
-import io.mindmaps.core.dao.GraphDAO;
-import io.mindmaps.core.dao.GraphDAOImpl;
+import io.mindmaps.core.dao.MindmapsGraph;
+import io.mindmaps.core.dao.MindmapsGraphFactory;
+import io.mindmaps.core.dao.MindmapsGraphImpl;
 import io.mindmaps.core.structure.types.ConceptInstance;
 import io.mindmaps.core.structure.types.RelationType;
 import io.mindmaps.core.structure.types.RoleType;
-import io.mindmaps.graph.config.MindmapsGraphFactory;
+import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
+import org.apache.tinkerpop.gremlin.structure.Graph;
+import org.apache.tinkerpop.gremlin.structure.Vertex;
+import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -22,35 +24,47 @@ public class UpdateKeyword {
      *
      * @param source an iid for a keyword
      * @param target and iid for a concept instance
-     * @param tf a titan factory for getting transactions
+     * @param config a titan config file
      */
-    public static void execute(String source, String target, String config){
-        // get transaction
-        GraphDAO mg = new GraphDAOImpl(MindmapsGraphFactory.buildNewTransaction(config));
+    public static void execute(String source, String target, MindmapsGraphFactory mg, String config){
+        // get graph transaction
+        MindmapsGraph transaction = mg.buildTransaction(config);
+//        transaction.enableBatchLoading();
 
-        // get source and target concepts
-        ConceptInstance keyword = mg.getConceptInstanceByItemIdentifier(source);
-        if (!keyword.getType().equals("http://mindmaps.io/keyword")) {throw new RuntimeException();}
-        ConceptInstance targetConcept = mg.getConceptInstanceByItemIdentifier(target);
+        Graph g = transaction.getGraph();
 
-        // get ontology elements
-        RelationType keywordConcept = mg.getRelationTypeByItemIdentifier("http://mindmaps.io/keyword-concept");
-        RoleType relatedConcept = mg.getRoleTypeByItemIdentifier("http://mindmaps.io/related-concept");
-        RoleType movieWithKeyword = mg.getRoleTypeByItemIdentifier("http://mindmaps.io/movie-with-keyword");
+        // fetch iterator of movies connected to keyword
+        GraphTraversal<Vertex, Vertex> movies = g.traversal().V().
+                has("ITEM_IDENTIFIER", source).
+                outE("RELATION").
+                has("TO_TYPE", "http://mindmaps.io/movie").otherV();
 
-        Set<ConceptInstance> movies = keyword.getRelatedConceptInstancesOutgoing();
-        movies.forEach(k -> {
-            if (k.getType().equals("http://mindmaps.io/movie")) {
-                Map<RoleType,ConceptInstance> roleMap = new HashMap();
-                roleMap.put(movieWithKeyword,k);
-                roleMap.put(relatedConcept,targetConcept);
-                mg.putAssertion(keywordConcept,roleMap);
-                System.out.println(k.getType());
-            }
+        // insert relations of type keyword-concept
+        Map<RoleType, ConceptInstance> roleMap = new HashMap<>();
+        movies.forEachRemaining(v -> {
+            MindmapsGraph assertionTransaction = mg.buildTransaction(config);
+            assertionTransaction.enableBatchLoading();
+
+            // get source and target concepts
+            ConceptInstance keyword = assertionTransaction.getConceptInstanceByItemIdentifier(source);
+            if (!keyword.getType().equals("http://mindmaps.io/keyword")) {throw new RuntimeException();}
+            ConceptInstance targetConcept = assertionTransaction.getConceptInstanceByItemIdentifier(target);
+
+            // get ontology elements
+            RelationType keywordConcept = assertionTransaction.getRelationTypeByItemIdentifier("http://mindmaps.io/keyword-concept");
+            RoleType relatedConcept = assertionTransaction.getRoleTypeByItemIdentifier("http://mindmaps.io/related-concept");
+            RoleType movieWithKeyword = assertionTransaction.getRoleTypeByItemIdentifier("http://mindmaps.io/movie-with-keyword");
+
+            ConceptInstance k = assertionTransaction.getConceptInstanceByItemIdentifier(v.value("ITEM_IDENTIFIER"));
+            roleMap.clear();
+            roleMap.put(movieWithKeyword, k);
+            roleMap.put(relatedConcept, targetConcept);
+            assertionTransaction.putAssertion(keywordConcept, roleMap);
+            assertionTransaction.commit();
         });
 
         // commit changes
-        mg.commit();
-        System.out.println("finished: "+source);
+        transaction.commit();
+        System.out.println("finished: " + source);
     }
 }

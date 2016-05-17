@@ -1,12 +1,3 @@
-import com.thinkaurelius.titan.core.TitanFactory;
-import io.mindmaps.core.dao.GraphDAO;
-import io.mindmaps.core.dao.GraphDAOImpl;
-import io.mindmaps.core.structure.types.ConceptInstance;
-import io.mindmaps.core.structure.types.RelationType;
-import io.mindmaps.core.structure.types.RoleType;
-import io.mindmaps.graph.config.MindmapsGraphFactory;
-import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
-
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;

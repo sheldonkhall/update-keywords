@@ -10,7 +10,7 @@
 
     <properties>
         <java.version>1.8</java.version>
-        <mindmapsgraql.version>0.0.1-SNAPSHOT</mindmapsgraql.version>
+        <mindmapsgraph.version>0.0.8</mindmapsgraph.version>
     </properties>
 
     <build>
@@ -28,9 +28,9 @@
 
     <dependencies>
         <dependency>
-            <groupId>io.mindmaps.graql</groupId>
-            <artifactId>mindmaps-graql</artifactId>
-            <version>${mindmapsgraql.version}</version>
+            <groupId>io.mindmaps.graph</groupId>
+            <artifactId>mindmaps-graph</artifactId>
+            <version>${mindmapsgraph.version}</version>
         </dependency>
     </dependencies>
 
