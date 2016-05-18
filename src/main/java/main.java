@@ -27,7 +27,7 @@ public class main {
         fix.prepareIIDMaps();
 
         // start a thread pool to handle keywords in parallel
-        ExecutorService threadPool = Executors.newFixedThreadPool(1);
+        ExecutorService threadPool = Executors.newFixedThreadPool(4);
 
         // get graph factory
         MindmapsGraphFactory mg = new TitanGraphFactory();

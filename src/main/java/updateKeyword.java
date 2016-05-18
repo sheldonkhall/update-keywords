@@ -9,6 +9,14 @@ import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 import org.apache.tinkerpop.gremlin.tinkergraph.structure.TinkerGraph;
 
+import javax.json.Json;
+import javax.json.JsonObject;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -27,10 +35,9 @@ public class UpdateKeyword {
      * @param config a titan config file
      */
     public static void execute(String source, String target, MindmapsGraphFactory mg, String config){
+
         // get graph transaction
         MindmapsGraph transaction = mg.buildTransaction(config);
-//        transaction.enableBatchLoading();
-
         Graph g = transaction.getGraph();
 
         // fetch iterator of movies connected to keyword
@@ -40,31 +47,73 @@ public class UpdateKeyword {
                 has("TO_TYPE", "http://mindmaps.io/movie").otherV();
 
         // insert relations of type keyword-concept
-        Map<RoleType, ConceptInstance> roleMap = new HashMap<>();
         movies.forEachRemaining(v -> {
             MindmapsGraph assertionTransaction = mg.buildTransaction(config);
-            assertionTransaction.enableBatchLoading();
 
-            // get source and target concepts
-            ConceptInstance keyword = assertionTransaction.getConceptInstanceByItemIdentifier(source);
-            if (!keyword.getType().equals("http://mindmaps.io/keyword")) {throw new RuntimeException();}
-            ConceptInstance targetConcept = assertionTransaction.getConceptInstanceByItemIdentifier(target);
+            // get source and target concepts to check for errors in input
+            if (!assertionTransaction.getConceptInstanceByItemIdentifier(source).getType()
+                    .equals("http://mindmaps.io/keyword")) {throw new RuntimeException();}
+//            if (assertionTransaction.getConceptInstanceByItemIdentifier(target)
+//                    .equals(null)) {throw new RuntimeException();}
 
-            // get ontology elements
-            RelationType keywordConcept = assertionTransaction.getRelationTypeByItemIdentifier("http://mindmaps.io/keyword-concept");
-            RoleType relatedConcept = assertionTransaction.getRoleTypeByItemIdentifier("http://mindmaps.io/related-concept");
-            RoleType movieWithKeyword = assertionTransaction.getRoleTypeByItemIdentifier("http://mindmaps.io/movie-with-keyword");
+            try {
+                // prepare post
+                URL url = new URL("http://localhost:8080/transaction");
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                con.setDoInput(true);
+                con.setDoOutput(true);
+                con.setRequestProperty("Content-Type", "application/json");
+                con.setRequestProperty("Accept", "application/json");
+                con.setRequestMethod("POST");
+                OutputStreamWriter wr = new OutputStreamWriter(con.getOutputStream());
 
-            ConceptInstance k = assertionTransaction.getConceptInstanceByItemIdentifier(v.value("ITEM_IDENTIFIER"));
-            roleMap.clear();
-            roleMap.put(movieWithKeyword, k);
-            roleMap.put(relatedConcept, targetConcept);
-            assertionTransaction.putAssertion(keywordConcept, roleMap);
-            assertionTransaction.commit();
+                // create payload
+                JsonObject post = createPost(v.value("ITEM_IDENTIFIER"), target);
+
+                // send
+                wr.write(post.toString());
+                wr.flush();
+
+                // display response
+
+                StringBuilder sb = new StringBuilder();
+                int HttpResult = con.getResponseCode();
+                if (HttpResult == HttpURLConnection.HTTP_OK) {
+                    BufferedReader br = new BufferedReader(
+                            new InputStreamReader(con.getInputStream(), "utf-8"));
+                    String line = null;
+                    while ((line = br.readLine()) != null) {
+                        sb.append(line + "\n");
+                    }
+                    br.close();
+                    System.out.println("" + sb.toString());
+                } else {
+                    System.out.println(con.getResponseMessage());
+                }
+
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         });
 
-        // commit changes
+        // close transaction
         transaction.commit();
-        System.out.println("finished: " + source);
+    }
+
+    private static JsonObject createPost(String movie, String concept) {
+        return Json.createObjectBuilder()
+                .add("add",Json.createObjectBuilder()
+                    .add("relationships",Json.createObjectBuilder()
+                        .add("keyword-concept", Json.createArrayBuilder()
+                            .add(Json.createObjectBuilder()
+                                .add("roles", Json.createObjectBuilder()
+                                    .add("related-concept",concept)
+                                    .add("movie-with-keyword",movie)
+                                )
+                            )
+                        )
+                    )
+                )
+                .build();
     }
 }
