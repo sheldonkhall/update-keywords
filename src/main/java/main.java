@@ -26,27 +26,20 @@ public class main {
         PrepareResolutionMaps fix = new PrepareResolutionMaps(data);
         fix.prepareIIDMaps();
 
-        // start a thread pool to handle keywords in parallel
-        ExecutorService threadPool = Executors.newFixedThreadPool(4);
-
         // get graph factory
         MindmapsGraphFactory mg = new TitanGraphFactory();
 
         // perform fix of all keywords
-        data.conceptsIID.get("keyword").forEach((k,v)->{
-            threadPool.execute(() -> {
-                v.forEach(iid -> {
-                    if (fix.resolutionIIDMap.containsKey(iid)) {
-                        UpdateKeyword.execute(iid, fix.resolutionIIDMap.get(iid), mg, graphConf);
-                    } else {
-                        UpdateKeyword.execute(iid, iid, mg, graphConf);
-                    }
-                });
-            });
-        });
+        data.conceptsIID.get("keyword").forEach((k,v)->
+            v.forEach(iid -> {
+                if (fix.resolutionIIDMap.containsKey(iid)) {
+                    UpdateKeyword.execute(iid, fix.resolutionIIDMap.get(iid), mg, graphConf);
+                } else {
+                    UpdateKeyword.execute(iid, iid, mg, graphConf);
+                }
+            })
+        );
 
-        threadPool.shutdown();
-        threadPool.awaitTermination(3,TimeUnit.DAYS);
         System.exit(0);
     }
 }
