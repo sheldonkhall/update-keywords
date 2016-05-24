@@ -1,5 +1,3 @@
-import io.mindmaps.core.dao.MindmapsGraphFactory;
-
 import javax.json.Json;
 import javax.json.JsonObject;
 import java.io.BufferedReader;
@@ -22,12 +20,12 @@ public class UpdateKeyword {
      * @param concept an iid for a concept instance to be attached to a movie
      * @param movie and iid for a concept instance that is a movie
      */
-    public static void execute(String concept, String movie){
+    public static void execute(String concept, String movie, String relationType){
 
         // insert relations of type keyword-concept
         try {
             // create payload
-            JsonObject post = createPost(movie, concept);
+            JsonObject post = createPost(movie, concept, relationType);
 
             // prepare post
             // TODO deploy needs port 80
@@ -74,7 +72,25 @@ public class UpdateKeyword {
         }
     }
 
-    private static JsonObject createPost(String movie, String concept) {
+    private static JsonObject createPost(String movie, String concept, String relationType) {
+        JsonObject post = null;
+        switch (relationType) {
+            case "person": post = createPostPerson(movie, concept);
+                break;
+            case "location": post = createPostLocation(movie, concept);
+                break;
+            case "genre": post = createPostGenre(movie, concept);
+                break;
+            case "mood": post = createPostMood(movie, concept);
+                break;
+        }
+        if (post==null) {
+            System.out.println("post was null for: movie - "+movie+" and concept - "+concept);
+        }
+        return post;
+    }
+
+    private static JsonObject createPostPerson(String movie, String concept) {
         return Json.createObjectBuilder()
             .add("add", Json.createObjectBuilder()
                 .add("relationships", Json.createObjectBuilder()
@@ -83,6 +99,57 @@ public class UpdateKeyword {
                             .add("roles", Json.createObjectBuilder()
                                 .add("related-concept", concept)
                                 .add("movie-with-keyword", movie)
+                            )
+                        )
+                    )
+                )
+            )
+            .build();
+    }
+
+    private static JsonObject createPostLocation(String movie, String concept) {
+        return Json.createObjectBuilder()
+            .add("add", Json.createObjectBuilder()
+                .add("relationships", Json.createObjectBuilder()
+                    .add("has-location", Json.createArrayBuilder()
+                        .add(Json.createObjectBuilder()
+                            .add("roles", Json.createObjectBuilder()
+                                .add("subject-with-location", concept)
+                                .add("location-of-subject", movie)
+                            )
+                        )
+                    )
+                )
+            )
+            .build();
+    }
+
+    private static JsonObject createPostGenre(String movie, String concept) {
+        return Json.createObjectBuilder()
+            .add("add", Json.createObjectBuilder()
+                .add("relationships", Json.createObjectBuilder()
+                    .add("has-genre", Json.createArrayBuilder()
+                        .add(Json.createObjectBuilder()
+                            .add("roles", Json.createObjectBuilder()
+                                .add("genre-of-production", concept)
+                                .add("production-with-genre", movie)
+                            )
+                        )
+                    )
+                )
+            )
+            .build();
+    }
+
+    private static JsonObject createPostMood(String movie, String concept) {
+        return Json.createObjectBuilder()
+            .add("add", Json.createObjectBuilder()
+                .add("relationships", Json.createObjectBuilder()
+                    .add("has-mood", Json.createArrayBuilder()
+                        .add(Json.createObjectBuilder()
+                            .add("roles", Json.createObjectBuilder()
+                                .add("mood-of-production", concept)
+                                .add("production-with-mood", movie)
                             )
                         )
                     )

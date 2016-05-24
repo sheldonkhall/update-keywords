@@ -25,7 +25,7 @@ public class main {
 
         // read resolutions and map to iids
         PrepareResolutionMaps fix = new PrepareResolutionMaps(data);
-        fix.prepareIIDMaps();
+        fix.prepareMaps();
 
         // get graph factory
         MindmapsGraphFactory mg = new TitanGraphFactory();
@@ -36,50 +36,69 @@ public class main {
         Map<String,GraphTraversal<Vertex, Vertex>> iterators = new HashMap<>();
 //        System.out.println(data.conceptsIID.get("keyword").size());
 //        System.out.println(data.conceptsIID.get("keyword"));
-        data.conceptsIID.get("keyword").forEach((k,v)->
-            v.forEach(iid -> {
-                // confirm that we have a keyword
-//                System.out.println(iid);
-                ConceptInstance potentialKeyword = transaction.getConceptInstanceByItemIdentifier(iid);
+//        data.conceptsIID.get("keyword").forEach((k,v)->
+//            v.forEach(iid -> {
+//                // confirm that we have a keyword
+////                System.out.println(iid);
+//                ConceptInstance potentialKeyword = transaction.getConceptInstanceByItemIdentifier(iid);
+//                if (potentialKeyword != null) {
+//                    if (!potentialKeyword.getType()
+//                            .equals("http://mindmaps.io/keyword")) {
+//                        throw new RuntimeException();
+//                    }
+//
+//                    // collect iterators
+//                    if (fix.resolutionIIDMap.containsKey(iid)) {
+//                        iterators.put(iid, g.traversal().V().
+//                                has("ITEM_IDENTIFIER", fix.resolutionIIDMap.get(iid)).
+//                                outE("RELATION").
+//                                has("TO_TYPE", "http://mindmaps.io/movie").otherV());
+//                    } else {
+//                        iterators.put(iid, g.traversal().V().
+//                                has("ITEM_IDENTIFIER", iid).
+//                                outE("RELATION").
+//                                has("TO_TYPE", "http://mindmaps.io/movie").otherV());
+//                    }
+//                }
+//            })
+//        );
+        fix.resolutionIIDMap.forEach((k, v) -> {
+                ConceptInstance potentialKeyword = transaction.getConceptInstanceByItemIdentifier(k);
                 if (potentialKeyword != null) {
                     if (!potentialKeyword.getType()
                             .equals("http://mindmaps.io/keyword")) {
                         throw new RuntimeException();
                     }
-
-                    // collect iterators
-                    if (fix.resolutionIIDMap.containsKey(iid)) {
-                        iterators.put(iid, g.traversal().V().
-                                has("ITEM_IDENTIFIER", fix.resolutionIIDMap.get(iid)).
-                                outE("RELATION").
-                                has("TO_TYPE", "http://mindmaps.io/movie").otherV());
-                    } else {
-                        iterators.put(iid, g.traversal().V().
-                                has("ITEM_IDENTIFIER", iid).
-                                outE("RELATION").
-                                has("TO_TYPE", "http://mindmaps.io/movie").otherV());
-                    }
+                    iterators.put(
+                            k,
+                            g.traversal().V().
+                                    has("ITEM_IDENTIFIER", fix.resolutionIIDMap.get(k)).
+                                    outE("RELATION").
+                                    has("TO_TYPE", "http://mindmaps.io/movie").otherV());
                 }
-            })
+            }
         );
 
-        // perform fix of all keywords
-        int i = 0;
-        boolean hasNext = true;
-        while (hasNext) {
-            i++;
-            hasNext = false;
-            for (Entry<String,GraphTraversal<Vertex, Vertex>> entry : iterators.entrySet()) {
-                if (entry.getValue().hasNext()) {
-                    UpdateKeyword.execute(entry.getKey(),
-                            entry.getValue().next().value("ITEM_IDENTIFIER"));
-                    hasNext |= entry.getValue().hasNext();
-                }
-                //TODO: remove the iterator once it is empty
-            }
-            System.out.println("Round robin completed: "+String.valueOf(i));
-        }
 
-        System.exit(0);
+            // perform fix of all keywords
+            int i = 0;
+            boolean hasNext = true;
+            while (hasNext) {
+                i++;
+                hasNext = false;
+                for (Entry<String, GraphTraversal<Vertex, Vertex>> entry : iterators.entrySet()) {
+                    if (entry.getValue().hasNext()) {
+                        UpdateKeyword.execute(
+                                fix.resolutionIIDMap.get(entry.getKey()),
+                                entry.getValue().next().value("ITEM_IDENTIFIER"),
+                                fix.resolutionRelationType.get(entry.getKey()));
+                        hasNext |= entry.getValue().hasNext();
+                    }
+                    //TODO: remove the iterator once it is empty
+                }
+                System.out.println("Round robin completed: " + String.valueOf(i));
+            }
+
+            System.exit(0);
+        }
     }
-}
