@@ -29,7 +29,7 @@ public class UpdateKeyword {
 
             // prepare post
             // TODO deploy needs port 80
-            URL url = new URL("http://localhost:8080/transaction");
+            URL url = new URL("http://localhost:80/transaction");
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setDoInput(true);
             con.setDoOutput(true);
