@@ -34,34 +34,7 @@ public class main {
         MindmapsGraph transaction = mg.buildTransaction(graphConf);
         Graph g = transaction.getGraph();
         Map<String,GraphTraversal<Vertex, Vertex>> iterators = new HashMap<>();
-//        System.out.println(data.conceptsIID.get("keyword").size());
-//        System.out.println(data.conceptsIID.get("keyword"));
-//        data.conceptsIID.get("keyword").forEach((k,v)->
-//            v.forEach(iid -> {
-//                // confirm that we have a keyword
-////                System.out.println(iid);
-//                ConceptInstance potentialKeyword = transaction.getConceptInstanceByItemIdentifier(iid);
-//                if (potentialKeyword != null) {
-//                    if (!potentialKeyword.getType()
-//                            .equals("http://mindmaps.io/keyword")) {
-//                        throw new RuntimeException();
-//                    }
-//
-//                    // collect iterators
-//                    if (fix.resolutionIIDMap.containsKey(iid)) {
-//                        iterators.put(iid, g.traversal().V().
-//                                has("ITEM_IDENTIFIER", fix.resolutionIIDMap.get(iid)).
-//                                outE("RELATION").
-//                                has("TO_TYPE", "http://mindmaps.io/movie").otherV());
-//                    } else {
-//                        iterators.put(iid, g.traversal().V().
-//                                has("ITEM_IDENTIFIER", iid).
-//                                outE("RELATION").
-//                                has("TO_TYPE", "http://mindmaps.io/movie").otherV());
-//                    }
-//                }
-//            })
-//        );
+
         fix.resolutionIIDMap.forEach((k, v) -> {
                 ConceptInstance potentialKeyword = transaction.getConceptInstanceByItemIdentifier(k);
                 if (potentialKeyword != null) {
@@ -72,7 +45,7 @@ public class main {
                     iterators.put(
                             k,
                             g.traversal().V().
-                                    has("ITEM_IDENTIFIER", fix.resolutionIIDMap.get(k)).
+                                    has("ITEM_IDENTIFIER", k).
                                     outE("RELATION").
                                     has("TO_TYPE", "http://mindmaps.io/movie").otherV());
                 }
