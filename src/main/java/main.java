@@ -1,14 +1,15 @@
 import io.mindmaps.core.dao.MindmapsGraph;
 import io.mindmaps.core.dao.MindmapsGraphFactory;
 import io.mindmaps.core.exceptions.ConceptException;
+import io.mindmaps.core.structure.types.Assertion;
+import io.mindmaps.core.structure.types.Casting;
 import io.mindmaps.core.structure.types.ConceptInstance;
 import io.mindmaps.graph.config.TitanGraphFactory;
 import org.apache.tinkerpop.gremlin.process.traversal.dsl.graph.GraphTraversal;
 import org.apache.tinkerpop.gremlin.structure.Graph;
 import org.apache.tinkerpop.gremlin.structure.Vertex;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 
 /**
@@ -18,7 +19,7 @@ import java.util.Map.Entry;
 public class main {
 
     public static void main(String [ ] args) throws InterruptedException {
-        String graphConf = "/opt/mindmaps/resources/conf/titan-cassandra-es.properties";
+        String graphConf = "/opt/mindmaps/resources/conf/titan-cassandra-es-batch.properties";
 
         // get iid maps in memory
         LoadExtractedData data = new LoadExtractedData();
@@ -74,26 +75,39 @@ public class main {
         }
 
         // delete the updated keywords
-        fix.resolutionIIDMap.keySet().forEach(k->{
+        for(String k: fix.resolutionIIDMap.keySet()){
             MindmapsGraph delete = mg.buildTransaction(graphConf);
             ConceptInstance keyword = delete.getConceptInstanceByItemIdentifier(k);
-            System.out.println("deleting keyword: "+keyword.getValue());
-            try {
-                keyword.getRoleCasting().forEach(c->
-                        c.getAssertions().forEach(a -> {
-                            try {
-                                a.delete();
-                            } catch (ConceptException e) {
-                                e.printStackTrace();
-                            }
-                        }));
-                keyword.delete();
-            } catch (ConceptException e) {
-                e.printStackTrace();
+            if (keyword!=null) {
+                System.out.println("deleting keyword: " + keyword.getValue().toString());
+
+                try {
+                    Set<Assertion> assertions = new HashSet<>();
+                    Set<Casting> castings = keyword.getRoleCasting();
+                    castings.forEach(c -> assertions.addAll(c.getAssertions()));
+
+                    castings.forEach(c -> {
+                        GraphTraversal<Vertex, Vertex> t = delete.getGraph().traversal().V(c.getBaseIdentifier());
+                        if (t.hasNext())
+                            t.next().remove();
+                    });
+
+                    assertions.forEach(a -> {
+                        GraphTraversal<Vertex, Vertex> t = delete.getGraph().traversal().V(a.getBaseIdentifier());
+                        if (t.hasNext())
+                            t.next().remove();
+                    });
+
+                    keyword.delete();
+                } catch (ConceptException e) {
+                    e.printStackTrace();
+                }
+                List<String> errors = delete.commit();
+                for (String error : errors)
+                    System.out.println("Error: " + error);
+                System.out.println("keyword deleted");
             }
-            delete.commit();
-            System.out.println("keyword deleted");
-        });
+        }
 
         System.out.println("keyword update done");
         System.exit(0);
